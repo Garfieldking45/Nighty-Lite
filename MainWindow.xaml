@@ -1,0 +1,664 @@
+<Window x:Class="Nighty.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Nighty"
+        Title="Nighty Lite" Width="1000" Height="600"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" ShowActivated="False" Focusable="False"
+        FontFamily="Segoe UI Variable, Segoe UI" FontSize="11.5">
+    <Window.Resources>
+        <local:IntConverter x:Key="Int"/>
+        <BooleanToVisibilityConverter x:Key="B2V"/>
+        <SolidColorBrush x:Key="Panel" Color="#FA1B1B1B"/>
+        <SolidColorBrush x:Key="Head" Color="#FA171717"/>
+        <SolidColorBrush x:Key="RowBg" Color="#1B1B1B"/>
+        <SolidColorBrush x:Key="RowHover" Color="#292929"/>
+        <SolidColorBrush x:Key="SubBg" Color="#121212"/>
+        <SolidColorBrush x:Key="Theme" Color="#058568"/>
+        <FontFamily x:Key="Icons">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <Style x:Key="PanelBorder" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Panel}"/>
+            <Setter Property="BorderBrush" Value="#0C0C0C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+        <Style x:Key="Row" TargetType="Grid">
+            <Setter Property="Margin" Value="0,7,0,0"/>
+        </Style>
+        <Style x:Key="Opt" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#D0D0D6"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- A module row: dark when off, theme colour when on. -->
+        <Style x:Key="Mod" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="b" Background="{DynamicResource RowBg}" Height="28">
+                            <TextBlock Text="{TemplateBinding Content}" VerticalAlignment="Center" Margin="10,0,26,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#D0D0D6"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="{DynamicResource RowHover}"/></Trigger>
+                            <Trigger Property="IsChecked" Value="True"><Setter TargetName="b" Property="Background" Value="{DynamicResource Theme}"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Category row in the host panel: text on the left, arrow on the right. -->
+        <Style x:Key="Cat" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="b" Background="{DynamicResource RowBg}" Height="32" BorderThickness="3,0,0,0" BorderBrush="Transparent">
+                            <Grid Margin="10,0,10,0">
+                                <TextBlock Text="{TemplateBinding Content}" Foreground="#D8D8DE" FontSize="12.5" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#xE76C;" FontFamily="{StaticResource Icons}" FontSize="10" Foreground="#80808A" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="{DynamicResource RowHover}"/></Trigger>
+                            <Trigger Property="IsChecked" Value="True"><Setter TargetName="b" Property="BorderBrush" Value="{DynamicResource Theme}"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The three-dot options button on the right of a module row. -->
+        <Style x:Key="Dots" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="b" Background="Transparent">
+                            <TextBlock Text="⋮" FontSize="15" FontWeight="Bold" Foreground="#B5B5BE" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="#22FFFFFF"/></Trigger>
+                            <Trigger Property="IsChecked" Value="True"><Setter TargetName="b" Property="Background" Value="#33FFFFFF"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- On/off pill, like the toggles in the reference. -->
+        <Style x:Key="Pill" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="track" Background="#3A3A3F" CornerRadius="8">
+                            <Ellipse x:Name="knob" Width="10" Height="10" Fill="White" HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="track" Property="Background" Value="{DynamicResource Theme}"/>
+                                <Setter TargetName="knob" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="knob" Property="Margin" Value="0,0,3,0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IconBtn" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="FontFamily" Value="{StaticResource Icons}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#C9C9D2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="b" Background="Transparent" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="#22FFFFFF"/></Trigger>
+                            <Trigger Property="IsChecked" Value="True"><Setter TargetName="b" Property="Background" Value="#33FFFFFF"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SubPanel" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SubBg}"/>
+            <Setter Property="Padding" Value="10,4,10,10"/>
+        </Style>
+    </Window.Resources>
+
+    <!-- The window covers the game; only the panels draw anything, so the rest of the screen stays clickable. -->
+    <Canvas x:Name="Overlay">
+
+        <!-- ================= Host panel ================= -->
+        <Border x:Name="HostPanel" Style="{StaticResource PanelBorder}" Width="200" Canvas.Left="16" Canvas.Top="16">
+            <StackPanel>
+                <Border Tag="host" Background="{DynamicResource Head}" Height="40" CornerRadius="3,3,0,0" Cursor="SizeAll"
+                        MouseLeftButtonDown="Head_Down" MouseMove="Head_Move" MouseLeftButtonUp="Head_Up">
+                    <Grid Margin="12,0,8,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource Theme}" Margin="0,0,8,0"/>
+                            <TextBlock Text="NIGHTY" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="LITE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource Theme}" VerticalAlignment="Top" Margin="3,8,0,0"/>
+                        </StackPanel>
+                        <ToggleButton x:Name="GearBtn" Style="{StaticResource IconBtn}" Content="&#xE713;" HorizontalAlignment="Right" ToolTip="Settings"
+                                      IsChecked="{Binding IsChecked, ElementName=SettingsTog, Mode=TwoWay}"/>
+                    </Grid>
+                </Border>
+                <ToggleButton x:Name="CombatTog" Style="{StaticResource Cat}" Content="Combat" IsChecked="True"/>
+                <ToggleButton x:Name="UtilityTog" Style="{StaticResource Cat}" Content="Utility" Margin="0,1,0,0"/>
+                <ToggleButton x:Name="RenderTog" Style="{StaticResource Cat}" Content="Render" Margin="0,1,0,0"/>
+                <TextBlock Text="MISC" FontSize="9" FontWeight="SemiBold" Foreground="#6C6C76" Margin="10,10,0,4"/>
+                <ToggleButton x:Name="SettingsTog" Style="{StaticResource Cat}" Content="Settings"/>
+                <Border Background="{DynamicResource Head}" Padding="10,6" Margin="0,8,0,0" CornerRadius="0,0,3,3">
+                    <TextBlock x:Name="StatusLine" Foreground="#8A8A94" FontSize="10.5" TextWrapping="Wrap"/>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ================= Combat module panel ================= -->
+        <Border x:Name="CombatPanel" Style="{StaticResource PanelBorder}" Width="236" Canvas.Left="232" Canvas.Top="16"
+                Visibility="{Binding IsChecked, ElementName=CombatTog, Converter={StaticResource B2V}}">
+            <StackPanel>
+                <Border Tag="combat" Background="{DynamicResource Head}" Height="34" CornerRadius="3,3,0,0" Cursor="Hand"
+                        MouseLeftButtonDown="Head_Down" MouseMove="Head_Move" MouseLeftButtonUp="Head_Up">
+                    <Grid Margin="12,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource Icons}" Foreground="#C9C9D2" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Grid.Column="1" Text="Combat" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CombatChevron" Grid.Column="2" Text="&#xE70E;" FontFamily="{StaticResource Icons}" FontSize="10" Foreground="#9A9AA3" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <StackPanel x:Name="CombatBody">
+
+                    <!-- ============ Auto Clicker ============ -->
+                    <Grid>
+                        <ToggleButton Style="{StaticResource Mod}" Content="Auto Clicker" IsChecked="{Binding Clicker.Enabled}"/>
+                        <TextBlock x:Name="ClickerState" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,28,0" FontSize="9.5" Foreground="#CCFFFFFF" IsHitTestVisible="False"/>
+                        <ToggleButton x:Name="ClickerDots" Style="{StaticResource Dots}"/>
+                    </Grid>
+                    <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=ClickerDots, Converter={StaticResource B2V}}">
+                        <StackPanel>
+                            <TextBlock x:Name="ClickerHint" Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,8"/>
+                            <Button x:Name="ClickerStart" Style="{StaticResource Primary}" Click="ClickerStart_Click"/>
+
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Hotkey"/>
+                                <Button x:Name="ClickerKey" Grid.Column="1" Padding="8,3" Click="ClickerKey_Click"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Key mode"/>
+                                <Button x:Name="ClickerMode" Grid.Column="1" Padding="8,3" Click="ClickerMode_Click"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Mouse button"/>
+                                <Button x:Name="ClickerButton" Grid.Column="1" Padding="8,3" Click="ClickerButton_Click"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Clicks / sec"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="1" Max="100" Step="0.5" Format="0.#"
+                                               Value="{Binding Clicker.Cps, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Duty cycle %"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="5" Max="95" Step="5" Format="0"
+                                               Value="{Binding Clicker.DutyCycle, Mode=TwoWay, Converter={StaticResource Int}}"/>
+                            </Grid>
+
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="Random speed"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Clicker.UseRange}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Min CPS"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="1" Max="100" Step="0.5" Format="0.#"
+                                               Value="{Binding Clicker.MinCps, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Max CPS"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="1" Max="100" Step="0.5" Format="0.#"
+                                               Value="{Binding Clicker.MaxCps, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="HitFix (steadier timing)"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Clicker.HitFix}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="Only while Roblox is in front"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Clicker.OnlyWhenRobloxFocused}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="Stop in screen corner"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Clicker.StopInCorner}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="Jitter"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Clicker.Jitter}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ============ Auto Crossbow ============ -->
+                    <Grid Margin="0,1,0,0">
+                        <ToggleButton Style="{StaticResource Mod}" Content="Auto Crossbow" IsChecked="{Binding Crossbow.Enabled}"/>
+                        <TextBlock x:Name="BowState" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,28,0" FontSize="9.5" Foreground="#CCFFFFFF" IsHitTestVisible="False"/>
+                        <ToggleButton x:Name="BowDots" Style="{StaticResource Dots}"/>
+                    </Grid>
+                    <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=BowDots, Converter={StaticResource B2V}}">
+                        <StackPanel>
+                            <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,8"
+                                       Text="Fires the crossbow, swings the sword the instant it is selected, clicks through the reload, then repeats."/>
+                            <Button x:Name="BowStart" Style="{StaticResource Primary}" Click="BowStart_Click"/>
+
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Hotkey"/>
+                                <Button x:Name="BowKey" Grid.Column="1" Padding="8,3" Click="BowKey_Click"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Key mode"/>
+                                <Button x:Name="BowMode" Grid.Column="1" Padding="8,3" Click="BowMode_Click"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Crossbow slot"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="1" Max="9" Step="1" Format="0"
+                                               Value="{Binding Crossbow.SlotA, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Sword slot"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="1" Max="9" Step="1" Format="0"
+                                               Value="{Binding Crossbow.SlotB, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Block slot"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="9" Step="1" Format="0" ZeroText="Off"
+                                               Value="{Binding Crossbow.BlockSlot, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="Only start in slot 1"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Crossbow.OnlyInSlotOne}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="Only while Roblox is in front"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Crossbow.OnlyWhenRobloxFocused}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="Clicker's clicks fire the shot"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Crossbow.UseClickerShots}"/>
+                            </Grid>
+
+                            <TextBlock Text="TIMING (MS)" FontSize="9.5" FontWeight="SemiBold" Foreground="#6C6C76" Margin="0,12,0,0"/>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Equip delay"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="22" Max="200" Step="1" Format="0"
+                                               Value="{Binding Crossbow.EquipDelayMs, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Shot hold"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="10" Max="150" Step="1" Format="0"
+                                               Value="{Binding Crossbow.ShotHoldMs, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Swap delay"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="150" Step="1" Format="0"
+                                               Value="{Binding Crossbow.SwapDelayMs, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Cooldown"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="3000" Step="50" Floor="800" Format="0" ZeroText="Auto"
+                                               Value="{Binding Crossbow.CooldownMs, Mode=TwoWay}"/>
+                            </Grid>
+                            <TextBlock Foreground="#6C6C76" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Text="Cooldown Auto = 1350. Raise it if every few shots does not fire."/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ============ Auto Tool ============ -->
+                    <Grid Margin="0,1,0,0">
+                        <ToggleButton Style="{StaticResource Mod}" Content="Auto Tool" IsChecked="{Binding AutoTool.Enabled}"/>
+                        <TextBlock x:Name="ToolState" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,28,0" FontSize="9.5" Foreground="#CCFFFFFF" IsHitTestVisible="False"/>
+                        <ToggleButton x:Name="ToolDots" Style="{StaticResource Dots}"/>
+                    </Grid>
+                    <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=ToolDots, Converter={StaticResource B2V}}">
+                        <StackPanel>
+                            <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,4"
+                                       Text="While you hold a tool slot and aim at a block, switches to the tool that breaks it. Just set your slots. Common blocks are built in; teach any it misses."/>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Pickaxe slot"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="9" Step="1" Format="0" ZeroText="Off"
+                                               Value="{Binding AutoTool.PickSlot, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Axe slot"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="9" Step="1" Format="0" ZeroText="Off"
+                                               Value="{Binding AutoTool.AxeSlot, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Shears slot"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="9" Step="1" Format="0" ZeroText="Off"
+                                               Value="{Binding AutoTool.ShearsSlot, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <TextBlock Style="{StaticResource Opt}" Text="Only while mining"/>
+                                <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding AutoTool.OnlyWhileMining}"/>
+                            </Grid>
+
+                            <TextBlock Text="TEACH (ONLY IF IT MISSES A BLOCK)" FontSize="9.5" FontWeight="SemiBold" Foreground="#6C6C76" Margin="0,12,0,0"/>
+                            <TextBlock Foreground="#6C6C76" FontSize="10" TextWrapping="Wrap" Margin="0,4,0,0"
+                                       Text="Hold the right tool, aim at the block, press the Teach key. Do it once per block type (wool: one colour covers them all)."/>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Teach key"/>
+                                <Button x:Name="TeachKey" Grid.Column="1" Padding="8,3" Click="TeachKey_Click"/>
+                            </Grid>
+                            <TextBlock x:Name="ToolLearned" Foreground="#8A8A94" FontSize="10" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <Button Style="{StaticResource Primary}" Content="Forget all taught blocks" Margin="0,8,0,0" Click="ToolForget_Click"/>
+
+                            <TextBlock Text="TUNING" FontSize="9.5" FontWeight="SemiBold" Foreground="#6C6C76" Margin="0,12,0,0"/>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Strictness %"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="40" Max="90" Step="2" Format="0"
+                                               Value="{Binding AutoTool.Strictness, Mode=TwoWay}"/>
+                            </Grid>
+                            <Grid Style="{StaticResource Row}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource Opt}" Text="Look size (px)"/>
+                                <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="8" Max="64" Step="4" Format="0"
+                                               Value="{Binding AutoTool.PatchSize, Mode=TwoWay}"/>
+                            </Grid>
+                            <TextBlock Foreground="#6C6C76" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Text="Switching to the wrong tool? Raise Strictness. Never switching? Lower it."/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ================= Utility panel (Boost FPS) ================= -->
+        <Border x:Name="UtilityPanel" Style="{StaticResource PanelBorder}" Width="236" Canvas.Left="484" Canvas.Top="16"
+                Visibility="{Binding IsChecked, ElementName=UtilityTog, Converter={StaticResource B2V}}">
+            <StackPanel>
+                <Border Tag="utility" Background="{DynamicResource Head}" Height="34" CornerRadius="3,3,0,0" Cursor="SizeAll"
+                        MouseLeftButtonDown="Head_Down" MouseMove="Head_Move" MouseLeftButtonUp="Head_Up">
+                    <Grid Margin="12,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource Icons}" Foreground="#C9C9D2" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Grid.Column="1" Text="Utility" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+                <Grid>
+                    <ToggleButton Style="{StaticResource Mod}" Content="Boost FPS" IsChecked="{Binding Boost.Enabled}"/>
+                    <TextBlock x:Name="BoostState" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,28,0" FontSize="9.5" Foreground="#CCFFFFFF" IsHitTestVisible="False"/>
+                    <ToggleButton x:Name="BoostDots" Style="{StaticResource Dots}"/>
+                </Grid>
+                <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=BoostDots, Converter={StaticResource B2V}}">
+                    <StackPanel>
+                        <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,4"
+                                   Text="Tuned for a laptop with two graphics chips. Nothing is closed, Roblox's files are never touched, and everything is undone when you switch it off or quit."/>
+                        <Grid Style="{StaticResource Row}">
+                            <TextBlock Style="{StaticResource Opt}" Text="Roblox on the fast GPU"/>
+                            <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Boost.GpuPreference}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <TextBlock Style="{StaticResource Opt}" Text="Windows Game Mode"/>
+                            <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Boost.GameMode}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <TextBlock Style="{StaticResource Opt}" Text="Roblox priority"/>
+                            <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Boost.RobloxPriority}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <TextBlock Style="{StaticResource Opt}" Text="Ease background apps"/>
+                            <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Boost.TrimBackground}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <TextBlock Style="{StaticResource Opt}" Text="Free memory when tight"/>
+                            <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Boost.FreeMemory}"/>
+                        </Grid>
+                        <TextBlock Text="EXTRAS" FontSize="9.5" FontWeight="SemiBold" Foreground="#6C6C76" Margin="0,12,0,0"/>
+                        <Grid Style="{StaticResource Row}">
+                            <TextBlock Style="{StaticResource Opt}" Text="Auto Sprint (holds Shift)"/>
+                            <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Extras.AutoSprint}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <TextBlock Style="{StaticResource Opt}" Text="Anti-AFK"/>
+                            <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Extras.AntiAfk}"/>
+                        </Grid>
+                        <TextBlock Text="NETWORK" FontSize="9.5" FontWeight="SemiBold" Foreground="#6C6C76" Margin="0,12,0,0"/>
+                        <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="10"
+                                   Text="No tool can cut the real delay to a server. This flushes DNS and marks Roblox as high priority for routers that honour it. Windows asks for approval."/>
+                        <Button Content="Apply network tune" Click="NetApply_Click" Padding="8,5" Margin="0,8,0,0"/>
+                        <Button Content="Remove network tune" Click="NetRemove_Click" Padding="8,5" Margin="0,4,0,0"/>
+                        <TextBlock x:Name="BoostInfo" Foreground="#6C6C76" FontSize="10" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ================= Render panel (overlays) ================= -->
+        <Border x:Name="RenderPanel" Style="{StaticResource PanelBorder}" Width="236" Canvas.Left="740" Canvas.Top="16"
+                Visibility="{Binding IsChecked, ElementName=RenderTog, Converter={StaticResource B2V}}">
+            <StackPanel>
+                <Border Tag="render" Background="{DynamicResource Head}" Height="34" CornerRadius="3,3,0,0" Cursor="SizeAll"
+                        MouseLeftButtonDown="Head_Down" MouseMove="Head_Move" MouseLeftButtonUp="Head_Up">
+                    <Grid Margin="12,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE7B3;" FontFamily="{StaticResource Icons}" Foreground="#C9C9D2" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Grid.Column="1" Text="Render" VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <Grid>
+                    <ToggleButton Style="{StaticResource Mod}" Content="Crosshair" IsChecked="{Binding Hud.CrosshairEnabled}"/>
+                    <ToggleButton x:Name="CrossDots" Style="{StaticResource Dots}"/>
+                </Grid>
+                <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=CrossDots, Converter={StaticResource B2V}}">
+                    <StackPanel>
+                        <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,2" Text="Drawn in the middle of the Roblox window while it is in front. Clicks pass straight through."/>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Style"/>
+                            <Button x:Name="HudStyle" Grid.Column="1" Padding="8,3" Click="HudStyle_Click"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Colour"/>
+                            <Button x:Name="HudColor" Grid.Column="1" Padding="8,3" Click="HudColor_Click"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Size"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="1" Max="80" Step="1" Format="0" Value="{Binding Hud.ArmLength, Mode=TwoWay, Converter={StaticResource Int}}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Thickness"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="1" Max="10" Step="1" Format="0" Value="{Binding Hud.Thickness, Mode=TwoWay, Converter={StaticResource Int}}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Gap"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="60" Step="1" Format="0" Value="{Binding Hud.Gap, Mode=TwoWay, Converter={StaticResource Int}}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <TextBlock Style="{StaticResource Opt}" Text="Outline"/>
+                            <ToggleButton Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Hud.Outline}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid Margin="0,1,0,0">
+                    <ToggleButton Style="{StaticResource Mod}" Content="CPS Counter" IsChecked="{Binding Hud.CpsEnabled}"/>
+                    <ToggleButton x:Name="CpsDots" Style="{StaticResource Dots}"/>
+                </Grid>
+                <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=CpsDots, Converter={StaticResource B2V}}">
+                    <StackPanel>
+                        <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,2" Text="Left clicks in the last second, including the Auto Clicker's. Position is a percentage of the Roblox window."/>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Across %"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="100" Step="5" Format="0" Value="{Binding Hud.CpsX, Mode=TwoWay}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Down %"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="100" Step="5" Format="0" Value="{Binding Hud.CpsY, Mode=TwoWay}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Scale"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0.5" Max="3" Step="0.1" Format="0.#" Value="{Binding Hud.CpsScale, Mode=TwoWay}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid Margin="0,1,0,0">
+                    <ToggleButton Style="{StaticResource Mod}" Content="FPS Counter" IsChecked="{Binding Hud.FpsEnabled}"/>
+                    <ToggleButton x:Name="FpsDots" Style="{StaticResource Dots}"/>
+                </Grid>
+                <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=FpsDots, Converter={StaticResource B2V}}">
+                    <StackPanel>
+                        <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,2" Text="Real frames per second Roblox draws. If it says Needs admin, run Nighty Lite as administrator."/>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Across %"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="100" Step="5" Format="0" Value="{Binding Hud.FpsX, Mode=TwoWay}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Down %"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="100" Step="5" Format="0" Value="{Binding Hud.FpsY, Mode=TwoWay}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid Margin="0,1,0,0">
+                    <ToggleButton Style="{StaticResource Mod}" Content="Ping Overlay" IsChecked="{Binding Hud.PingEnabled}"/>
+                    <ToggleButton x:Name="PingDots" Style="{StaticResource Dots}"/>
+                </Grid>
+                <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=PingDots, Converter={StaticResource B2V}}">
+                    <StackPanel>
+                        <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,2" Text="Round-trip time to a fast public server, with jitter and packet loss. Roblox game servers cannot be pinged directly."/>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Ping to"/>
+                            <Button x:Name="PingHostBtn" Grid.Column="1" Padding="8,3" Click="PingHost_Click"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Across %"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="100" Step="5" Format="0" Value="{Binding Hud.PingX, Mode=TwoWay}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Down %"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="100" Step="5" Format="0" Value="{Binding Hud.PingY, Mode=TwoWay}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ================= Settings panel ================= -->
+        <Border x:Name="SettingsPanel" Style="{StaticResource PanelBorder}" Width="236" Canvas.Left="996" Canvas.Top="16"
+                Visibility="{Binding IsChecked, ElementName=SettingsTog, Converter={StaticResource B2V}}">
+            <StackPanel>
+                <Border Tag="settings" Background="{DynamicResource Head}" Height="34" CornerRadius="3,3,0,0" Cursor="SizeAll"
+                        MouseLeftButtonDown="Head_Down" MouseMove="Head_Move" MouseLeftButtonUp="Head_Up">
+                    <Grid Margin="12,0,6,0">
+                        <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                        <Button Content="&#xE711;" FontFamily="{StaticResource Icons}" FontSize="11" Padding="6,4" Click="CloseSettings_Click"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" Background="Transparent" BorderBrush="Transparent"/>
+                    </Grid>
+                </Border>
+                <StackPanel Margin="12,10,12,12">
+                    <Grid>
+                        <TextBlock Style="{StaticResource Opt}" Text="GUI theme"/>
+                        <TextBlock x:Name="HexText" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#8A8A94" FontSize="10.5"/>
+                    </Grid>
+                    <Grid x:Name="HueHost" Height="22" Margin="0,6,0,0" Background="Transparent" Cursor="Hand"
+                          MouseLeftButtonDown="Hue_Down" MouseMove="Hue_Move" MouseLeftButtonUp="Hue_Up" SizeChanged="Hue_SizeChanged">
+                        <Border Height="6" CornerRadius="3" VerticalAlignment="Center" Margin="7,0">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#E53935" Offset="0"/>
+                                    <GradientStop Color="#F5811F" Offset="0.14"/>
+                                    <GradientStop Color="#FDD835" Offset="0.28"/>
+                                    <GradientStop Color="#43A047" Offset="0.42"/>
+                                    <GradientStop Color="#00ACC1" Offset="0.56"/>
+                                    <GradientStop Color="#1E88E5" Offset="0.70"/>
+                                    <GradientStop Color="#8E24AA" Offset="0.85"/>
+                                    <GradientStop Color="#EC407A" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Ellipse x:Name="HueThumb" Width="14" Height="14" HorizontalAlignment="Left" Fill="{DynamicResource Theme}" Stroke="White" StrokeThickness="2"/>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource Opt}" Text="Panel colour" Margin="0,14,0,0"/>
+                    <WrapPanel x:Name="SwatchPanel" Margin="0,8,0,0"/>
+
+                    <Grid Style="{StaticResource Row}" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource Opt}" Text="Rebind GUI"/>
+                        <Button x:Name="GuiKey" Grid.Column="1" Padding="10,3" MinWidth="70" Click="GuiKey_Click"/>
+                    </Grid>
+                    <Grid Style="{StaticResource Row}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource Opt}" Text="Emergency stop"/>
+                        <Button x:Name="StopKey" Grid.Column="1" Padding="10,3" MinWidth="70" Click="StopKey_Click"/>
+                    </Grid>
+                    <Button Content="Reset GUI positions" Click="ResetPos_Click" Padding="8,5" Margin="0,14,0,0"/>
+                    <Button Content="Quit Nighty" Click="Quit_Click" Padding="8,5" Margin="0,6,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Canvas>
+</Window>

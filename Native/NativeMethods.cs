@@ -1,0 +1,316 @@
+using System.Runtime.InteropServices;
+
+namespace Nighty.Native;
+
+internal static class NativeMethods
+{
+    // ---------- SendInput ----------
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT { public int X, Y; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MOUSEINPUT { public int dx, dy; public uint mouseData, dwFlags, time; public IntPtr dwExtraInfo; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KEYBDINPUT { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr dwExtraInfo; }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct INPUTUNION
+    {
+        [FieldOffset(0)] public MOUSEINPUT mi;
+        [FieldOffset(0)] public KEYBDINPUT ki;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct INPUT { public uint type; public INPUTUNION u; }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint SendInput(uint count, INPUT[] inputs, int size);
+
+    public const uint INPUT_MOUSE = 0, INPUT_KEYBOARD = 1;
+    public const uint MOUSEEVENTF_LEFTDOWN = 0x2, MOUSEEVENTF_LEFTUP = 0x4, MOUSEEVENTF_RIGHTDOWN = 0x8,
+        MOUSEEVENTF_RIGHTUP = 0x10, MOUSEEVENTF_MIDDLEDOWN = 0x20, MOUSEEVENTF_MIDDLEUP = 0x40, MOUSEEVENTF_MOVE = 0x1;
+    public const uint KEYEVENTF_EXTENDEDKEY = 0x1, KEYEVENTF_KEYUP = 0x2;
+
+    [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint mapType);
+    [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vKey);
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+
+    // ---------- Screen capture (Auto Tool) ----------
+    [StructLayout(LayoutKind.Sequential)] public struct CURSORINFO { public int cbSize, flags; public IntPtr hCursor; public POINT ptScreenPos; }
+    public const int CURSOR_SHOWING = 1;
+    [DllImport("user32.dll")] public static extern bool GetCursorInfo(ref CURSORINFO ci);
+    [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
+    [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr h);
+    [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr h, IntPtr dc);
+    [DllImport("gdi32.dll")] public static extern IntPtr CreateCompatibleDC(IntPtr dc);
+    [DllImport("gdi32.dll")] public static extern IntPtr CreateCompatibleBitmap(IntPtr dc, int w, int h);
+    [DllImport("gdi32.dll")] public static extern IntPtr SelectObject(IntPtr dc, IntPtr obj);
+    [DllImport("gdi32.dll")] public static extern bool DeleteObject(IntPtr obj);
+    [DllImport("gdi32.dll")] public static extern bool DeleteDC(IntPtr dc);
+    [DllImport("gdi32.dll")] public static extern bool BitBlt(IntPtr dst, int x, int y, int w, int h, IntPtr src, int sx, int sy, uint rop);
+    public const uint SRCCOPY = 0x00CC0020;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct BITMAPINFOHEADER
+    {
+        public int biSize, biWidth, biHeight;
+        public short biPlanes, biBitCount;
+        public int biCompression, biSizeImage, biXPelsPerMeter, biYPelsPerMeter, biClrUsed, biClrImportant;
+    }
+    [DllImport("gdi32.dll")] public static extern int GetDIBits(IntPtr dc, IntPtr bmp, uint start, uint lines, byte[]? bits, ref BITMAPINFOHEADER bi, uint usage);
+
+    // ---------- Low level hooks ----------
+    public delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
+    public const int WH_KEYBOARD_LL = 13, WM_KEYDOWN = 0x100, WM_KEYUP = 0x101, WM_SYSKEYDOWN = 0x104, WM_SYSKEYUP = 0x105;
+    public const uint LLKHF_INJECTED = 0x10;
+    public const int WH_MOUSE_LL = 14, WM_LBUTTONDOWN = 0x201, WM_RBUTTONDOWN = 0x204, WM_MBUTTONDOWN = 0x207;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelProc fn, IntPtr hMod, uint threadId);
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnhookWindowsHookEx(IntPtr hhk);
+    [DllImport("user32.dll")]
+    public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr GetModuleHandle(string? name);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam, lParam; public uint time; public POINT pt; }
+    public const uint WM_QUIT = 0x12;
+    [DllImport("user32.dll")] public static extern int GetMessage(out MSG msg, IntPtr hWnd, uint min, uint max);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static extern bool PostThreadMessage(uint threadId, uint msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+
+    // ---------- Foreground-change events ----------
+    public delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+    public const uint EVENT_SYSTEM_FOREGROUND = 0x3, WINEVENT_OUTOFCONTEXT = 0x0;
+    [DllImport("user32.dll")] public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmod, WinEventProc proc, uint pid, uint thread, uint flags);
+
+    // ---------- System parameters ----------
+    public const uint SPI_GETMOUSE = 0x3, SPI_SETMOUSE = 0x4, SPI_GETKEYBOARDSPEED = 0xA, SPI_SETKEYBOARDSPEED = 0xB,
+        SPI_GETKEYBOARDDELAY = 0x16, SPI_SETKEYBOARDDELAY = 0x17,
+        SPI_GETFILTERKEYS = 0x32, SPI_SETFILTERKEYS = 0x33, SPI_GETTOGGLEKEYS = 0x34, SPI_SETTOGGLEKEYS = 0x35,
+        SPI_GETSTICKYKEYS = 0x3A, SPI_SETSTICKYKEYS = 0x3B, SPI_GETMOUSESPEED = 0x70, SPI_SETMOUSESPEED = 0x71,
+        SPI_GETWHEELSCROLLLINES = 0x68, SPI_SETWHEELSCROLLLINES = 0x69;
+    [DllImport("user32.dll")] public static extern uint GetDoubleClickTime();
+    [DllImport("user32.dll")] public static extern bool SetDoubleClickTime(uint ms);
+    public const uint SPIF_UPDATEINIFILE = 0x1, SPIF_SENDCHANGE = 0x2;
+
+    [StructLayout(LayoutKind.Sequential)] public struct STICKYKEYS { public uint cbSize, dwFlags; }
+    [StructLayout(LayoutKind.Sequential)] public struct TOGGLEKEYS { public uint cbSize, dwFlags; }
+    [StructLayout(LayoutKind.Sequential)] public struct FILTERKEYS { public uint cbSize, dwFlags, iWaitMSec, iDelayMSec, iRepeatMSec, iBounceMSec; }
+
+    [DllImport("user32.dll", SetLastError = true)] public static extern bool SystemParametersInfo(uint a, uint p, out int v, uint w);
+    [DllImport("user32.dll", SetLastError = true)] public static extern bool SystemParametersInfo(uint a, uint p, IntPtr v, uint w);
+    [DllImport("user32.dll", SetLastError = true)] public static extern bool SystemParametersInfo(uint a, uint p, int[] v, uint w);
+    [DllImport("user32.dll", SetLastError = true)] public static extern bool SystemParametersInfo(uint a, uint p, ref STICKYKEYS v, uint w);
+    [DllImport("user32.dll", SetLastError = true)] public static extern bool SystemParametersInfo(uint a, uint p, ref TOGGLEKEYS v, uint w);
+    [DllImport("user32.dll", SetLastError = true)] public static extern bool SystemParametersInfo(uint a, uint p, ref FILTERKEYS v, uint w);
+
+    // ---------- High-resolution waitable timer ----------
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    public static extern IntPtr CreateWaitableTimerExW(IntPtr attrs, string? name, uint flags, uint access);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetWaitableTimer(IntPtr timer, ref long dueTime, int period, IntPtr fn, IntPtr arg, bool resume);
+    [DllImport("kernel32.dll")] public static extern uint WaitForSingleObject(IntPtr h, uint ms);
+    [DllImport("kernel32.dll")] public static extern uint WaitForMultipleObjects(uint count, IntPtr[] handles, bool waitAll, uint ms);
+    public const uint CREATE_WAITABLE_TIMER_HIGH_RESOLUTION = 0x2, TIMER_ALL_ACCESS = 0x1F0003;
+
+    // ---------- Scheduling hints ----------
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PROCESS_POWER_THROTTLING_STATE { public uint Version, ControlMask, StateMask; }
+    [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentProcess();
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetProcessInformation(IntPtr process, int infoClass, ref PROCESS_POWER_THROTTLING_STATE info, int size);
+    [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+    [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h);
+    public const uint PROCESS_SET_INFORMATION = 0x0200, PROCESS_QUERY_INFORMATION = 0x0400, PROCESS_SET_QUOTA = 0x0100;
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SYSTEM_POWER_STATUS { public byte ACLineStatus, BatteryFlag, BatteryLifePercent, SystemStatusFlag; public int BatteryLifeTime, BatteryFullLifeTime; }
+    [DllImport("kernel32.dll")] public static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS s);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+    public static readonly IntPtr HWND_TOPMOST = new(-1);
+    public const uint SWP_NOACTIVATE = 0x0010, SWP_SHOWWINDOW = 0x0040;
+    public const int ProcessPowerThrottling = 4;
+    public const uint THROTTLE_EXECUTION_SPEED = 0x1, THROTTLE_IGNORE_TIMER_RESOLUTION = 0x4;
+    [DllImport("avrt.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr AvSetMmThreadCharacteristicsW(string task, ref uint index);
+    [DllImport("avrt.dll", SetLastError = true)]
+    public static extern bool AvRevertMmThreadCharacteristics(IntPtr handle);
+    [DllImport("avrt.dll", SetLastError = true)]
+    public static extern bool AvSetMmThreadPriority(IntPtr handle, int priority);
+    public const int AVRT_PRIORITY_CRITICAL = 2;
+
+    // ---------- Thread placement (HitFix) ----------
+    [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentThread();
+    [DllImport("kernel32.dll")] public static extern UIntPtr SetThreadAffinityMask(IntPtr thread, UIntPtr mask);
+    [DllImport("kernel32.dll")] public static extern uint SetThreadIdealProcessor(IntPtr thread, uint processor);
+    [DllImport("kernel32.dll")] public static extern bool SetThreadPriority(IntPtr thread, int priority);
+    [DllImport("kernel32.dll")] public static extern int GetThreadPriority(IntPtr thread);
+    [DllImport("kernel32.dll")] public static extern bool GetProcessAffinityMask(IntPtr process, out UIntPtr processMask, out UIntPtr systemMask);
+    public const int THREAD_PRIORITY_TIME_CRITICAL = 15;
+
+    // Group-aware placement and CPU Sets (which core is the fast one), plus the per-thread power-throttling opt-out.
+    [StructLayout(LayoutKind.Sequential)] public struct PROCESSOR_NUMBER { public ushort Group; public byte Number; public byte Reserved; }
+    [StructLayout(LayoutKind.Sequential)] public struct GROUP_AFFINITY { public UIntPtr Mask; public ushort Group, Reserved0, Reserved1, Reserved2; }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadIdealProcessorEx(IntPtr thread, ref PROCESSOR_NUMBER ideal, out PROCESSOR_NUMBER previous);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadGroupAffinity(IntPtr thread, ref GROUP_AFFINITY affinity, out GROUP_AFFINITY previous);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadGroupAffinity(IntPtr thread, ref GROUP_AFFINITY affinity, IntPtr previous);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetSystemCpuSetInformation(IntPtr info, uint bufferLength, out uint returnedLength, IntPtr process, uint flags);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadInformation(IntPtr thread, int infoClass, ref PROCESS_POWER_THROTTLING_STATE info, int size);
+    public const int ThreadPowerThrottling = 3;
+
+    [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr process);
+
+    // ---------- Timing / power ----------
+    [DllImport("winmm.dll")] public static extern uint timeBeginPeriod(uint ms);
+    [DllImport("winmm.dll")] public static extern uint timeEndPeriod(uint ms);
+    [DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint flags);
+    public const uint ES_CONTINUOUS = 0x80000000, ES_SYSTEM_REQUIRED = 0x1, ES_DISPLAY_REQUIRED = 0x2;
+
+    // ---------- System usage ----------
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEMORYSTATUSEX
+    {
+        public uint dwLength, dwMemoryLoad;
+        public ulong ullTotalPhys, ullAvailPhys, ullTotalPageFile, ullAvailPageFile, ullTotalVirtual, ullAvailVirtual, ullAvailExtendedVirtual;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)] public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX m);
+    [DllImport("kernel32.dll")] public static extern bool GetSystemTimes(out long idle, out long kernel, out long user);
+
+    // ---------- Shell ----------
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SHQUERYRBINFO { public uint cbSize; public long i64Size, i64NumItems; }
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern int SHQueryRecycleBin(string? root, ref SHQUERYRBINFO info);
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern int SHEmptyRecycleBin(IntPtr hwnd, string? root, uint flags);
+    public const uint SHERB_NOCONFIRMATION = 1, SHERB_NOPROGRESSUI = 2, SHERB_NOSOUND = 4;
+
+    // ---------- Window styles / DWM ----------
+    public const int GWL_EXSTYLE = -20;
+    public const long WS_EX_TRANSPARENT = 0x20, WS_EX_TOOLWINDOW = 0x80, WS_EX_NOACTIVATE = 0x08000000;
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] public static extern IntPtr GetWindowLongPtr(IntPtr h, int i);
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")] public static extern IntPtr SetWindowLongPtr(IntPtr h, int i, IntPtr v);
+    [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr h, int attr, ref int v, int size);
+
+    // ---------- Monitors / DDC-CI ----------
+    public delegate bool MonitorEnumProc(IntPtr hMon, IntPtr hdc, IntPtr rect, IntPtr data);
+    [DllImport("user32.dll")] public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc cb, IntPtr data);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct PHYSICAL_MONITOR
+    {
+        public IntPtr hPhysicalMonitor;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string szPhysicalMonitorDescription;
+    }
+    [DllImport("dxva2.dll", SetLastError = true)] public static extern bool GetNumberOfPhysicalMonitorsFromHMONITOR(IntPtr h, out uint n);
+    [DllImport("dxva2.dll", SetLastError = true)] public static extern bool GetPhysicalMonitorsFromHMONITOR(IntPtr h, uint n, [Out] PHYSICAL_MONITOR[] arr);
+    [DllImport("dxva2.dll", SetLastError = true)] public static extern bool GetMonitorBrightness(IntPtr h, out uint min, out uint cur, out uint max);
+    [DllImport("dxva2.dll", SetLastError = true)] public static extern bool SetMonitorBrightness(IntPtr h, uint value);
+    [DllImport("dxva2.dll", SetLastError = true)] public static extern bool DestroyPhysicalMonitors(uint n, PHYSICAL_MONITOR[] arr);
+}
+
+/// <summary>Thin helpers over SendInput.</summary>
+internal static class InputSender
+{
+    [ThreadStatic] private static NativeMethods.INPUT[]? MouseBuf;
+    private static readonly int Size = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.INPUT>();
+
+    /// <summary>Sends one button edge. Returns false when Windows refused it (the focused app runs as administrator and Nighty does not).</summary>
+    public static bool MouseButton(Models.ClickButton b, bool down)
+    {
+        uint flag = (b, down) switch
+        {
+            (Models.ClickButton.Left, true) => NativeMethods.MOUSEEVENTF_LEFTDOWN,
+            (Models.ClickButton.Left, false) => NativeMethods.MOUSEEVENTF_LEFTUP,
+            (Models.ClickButton.Right, true) => NativeMethods.MOUSEEVENTF_RIGHTDOWN,
+            (Models.ClickButton.Right, false) => NativeMethods.MOUSEEVENTF_RIGHTUP,
+            (Models.ClickButton.Middle, true) => NativeMethods.MOUSEEVENTF_MIDDLEDOWN,
+            _ => NativeMethods.MOUSEEVENTF_MIDDLEUP,
+        };
+        var buf = MouseBuf ??= new NativeMethods.INPUT[1];
+        buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
+        buf[0].u.mi.dwFlags = flag;
+        return NativeMethods.SendInput(1, buf, Size) == 1;
+    }
+
+    /// <summary>A zero-distance mouse move: exercises SendInput exactly like a click without clicking anything.</summary>
+    public static void Noop()
+    {
+        var buf = MouseBuf ??= new NativeMethods.INPUT[1];
+        buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
+        buf[0].u.mi.dwFlags = NativeMethods.MOUSEEVENTF_MOVE;
+        NativeMethods.SendInput(1, buf, Size);
+    }
+
+    public static void Scroll(int notches)
+    {
+        var buf = new NativeMethods.INPUT[1];
+        buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
+        buf[0].u.mi.dwFlags = 0x0800;   // MOUSEEVENTF_WHEEL
+        buf[0].u.mi.mouseData = unchecked((uint)(notches * 120));
+        NativeMethods.SendInput(1, buf, Size);
+    }
+
+    public static void MoveRelative(int dx, int dy)
+    {
+        var buf = new NativeMethods.INPUT[1];
+        buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
+        buf[0].u.mi.dx = dx; buf[0].u.mi.dy = dy;
+        buf[0].u.mi.dwFlags = NativeMethods.MOUSEEVENTF_MOVE;
+        NativeMethods.SendInput(1, buf, Size);
+    }
+
+    /// <summary>Types text as Unicode characters, so it lands in chat and text boxes whatever the keyboard layout.</summary>
+    public static void TypeText(string text, System.Threading.CancellationToken ct)
+    {
+        foreach (char ch in text)
+        {
+            if (ct.IsCancellationRequested) return;
+            var down = new NativeMethods.INPUT { type = NativeMethods.INPUT_KEYBOARD };
+            down.u.ki.wScan = ch; down.u.ki.dwFlags = 0x4;   // KEYEVENTF_UNICODE
+            var up = down; up.u.ki.dwFlags = 0x4 | NativeMethods.KEYEVENTF_KEYUP;
+            NativeMethods.SendInput(2, new[] { down, up }, Size);
+            System.Threading.Thread.Sleep(5);
+        }
+    }
+
+    /// <summary>Key press as a hardware scancode (no virtual key), which games that ignore plain VK input still see.</summary>
+    public static void KeyScan(int vk, bool down)
+    {
+        if (vk <= 0) return;
+        var input = new NativeMethods.INPUT { type = NativeMethods.INPUT_KEYBOARD };
+        input.u.ki.wScan = (ushort)NativeMethods.MapVirtualKey((uint)vk, 0);
+        uint flags = 0x0008 | (down ? 0u : NativeMethods.KEYEVENTF_KEYUP);   // KEYEVENTF_SCANCODE
+        if (IsExtended(vk)) flags |= NativeMethods.KEYEVENTF_EXTENDEDKEY;
+        input.u.ki.dwFlags = flags;
+        NativeMethods.SendInput(1, new[] { input }, Size);
+    }
+
+    public static void Key(int vk, bool down)
+    {
+        var input = new NativeMethods.INPUT { type = NativeMethods.INPUT_KEYBOARD };
+        input.u.ki.wVk = (ushort)vk;
+        input.u.ki.wScan = (ushort)NativeMethods.MapVirtualKey((uint)vk, 0);
+        uint flags = down ? 0u : NativeMethods.KEYEVENTF_KEYUP;
+        if (IsExtended(vk)) flags |= NativeMethods.KEYEVENTF_EXTENDEDKEY;
+        input.u.ki.dwFlags = flags;
+        NativeMethods.SendInput(1, new[] { input }, Size);
+    }
+
+    private static bool IsExtended(int vk) =>
+        vk is 0x21 or 0x22 or 0x23 or 0x24 or 0x25 or 0x26 or 0x27 or 0x28 or 0x2D or 0x2E or 0x90 or 0xA3 or 0xA5 or 0x5B or 0x5C;
+}
