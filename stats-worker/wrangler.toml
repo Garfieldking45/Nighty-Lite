@@ -1,4 +1,4 @@
-name = "nighty-stats"
+﻿name = "nighty-stats"
 main = "worker.js"
 compatibility_date = "2024-11-01"
 
@@ -6,4 +6,5 @@ compatibility_date = "2024-11-01"
 # then paste the id it prints below.
 [[kv_namespaces]]
 binding = "STATS"
-id = "PASTE_KV_NAMESPACE_ID_HERE"
+id = "f9e0f57aac0544308ee39f8a6d016244"
+

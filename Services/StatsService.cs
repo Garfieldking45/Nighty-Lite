@@ -13,7 +13,7 @@ namespace Nighty.Services;
 public static class StatsService
 {
     /// <summary>e.g. "https://nighty-stats.YOURNAME.workers.dev/ping". Empty = disabled.</summary>
-    public const string Endpoint = "";
+    public const string Endpoint = "https://nighty-stats.gamerethanosvog.workers.dev/ping";
 
     public static async Task PingAsync(ExtrasConfig cfg)
     {
