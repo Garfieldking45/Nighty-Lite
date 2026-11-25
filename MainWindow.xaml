@@ -660,7 +660,8 @@
                         <TextBlock Style="{StaticResource Opt}" Text="Share anonymous usage stats"/>
                         <ToggleButton Grid.Column="1" Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Extras.ShareUsageStats}"/>
                     </Grid>
-                    <Button Content="Reset GUI positions" Click="ResetPos_Click" Padding="8,5" Margin="0,14,0,0"/>
+                    <Button Content="Send a suggestion" Click="Suggest_Click" Padding="8,5" Margin="0,14,0,0"/>
+                    <Button Content="Reset GUI positions" Click="ResetPos_Click" Padding="8,5" Margin="0,6,0,0"/>
                     <Button x:Name="UpdateBtn" Visibility="Collapsed" Click="Update_Click" Padding="8,5" Margin="0,6,0,0"/>
                     <Button Content="Quit Nighty" Click="Quit_Click" Padding="8,5" Margin="0,6,0,0"/>
                 </StackPanel>

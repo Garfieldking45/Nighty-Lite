@@ -19,6 +19,38 @@ public static class StatsService
     /// <summary>The stats worker (see stats-worker/README.md). Empty = disabled.</summary>
     public const string Endpoint = "https://nighty-stats.gamerethanosvog.workers.dev/ping";
 
+    /// <summary>Where suggestions typed by the user are sent (only when they press Send).</summary>
+    public const string SuggestEndpoint = "https://nighty-stats.gamerethanosvog.workers.dev/suggest";
+
+    /// <summary>Sends one suggestion the user typed. Works even with usage stats switched off, because the user pressed Send.</summary>
+    public static async Task<(bool Ok, string Message)> SendSuggestionAsync(AppSettings s, string text)
+    {
+        try
+        {
+            text = text.Trim();
+            if (text.Length < 3) return (false, "Please write a little more.");
+            var cfg = s.Extras;
+            if (cfg.InstallId.Length == 0) { cfg.InstallId = Guid.NewGuid().ToString("D"); Svc.Settings.Save(); }
+            var v = UpdateService.Current;
+            string body = JsonSerializer.Serialize(new { id = cfg.InstallId, v = $"{v.Major}.{v.Minor}.{v.Build}", text });
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("NightyLite-Suggest");
+            using var resp = await http.PostAsync(SuggestEndpoint, new StringContent(body, Encoding.UTF8, "application/json"));
+            Log.Info("Suggestion sent: HTTP " + (int)resp.StatusCode);
+            return (int)resp.StatusCode switch
+            {
+                200 => (true, "Thanks! Your suggestion was sent."),
+                429 => (false, "You have sent a lot today. Please try again tomorrow."),
+                _ => (false, "Could not send it right now. Please try again later."),
+            };
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("Suggestion failed", ex);
+            return (false, "Could not reach the server. Check your connection and try again.");
+        }
+    }
+
     private static readonly string[] FeatureNames = { "clicker", "crossbow", "autotool", "boost", "crosshair", "cps", "sprint", "afk" };
 
     // Collected this session (thread safe: the clicker, crossbow and logger run off the UI thread).

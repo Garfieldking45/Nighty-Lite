@@ -28,6 +28,7 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === "/ping" && req.method === "POST") return ping(req, env);
+    if (url.pathname === "/suggest" && req.method === "POST") return suggest(req, env);
     if (url.pathname === "/stats") return stats(url, env);
     return new Response("Not found", { status: 404 });
   },
@@ -79,6 +80,38 @@ async function ping(req, env) {
   return new Response("ok");
 }
 
+// ---------------------------------------------------------------- suggestions
+// Only sent when a user types one and presses Send in the app. Stored without the install ID.
+// Limits: 3 per install per day, 200 in total per day, 500 characters each.
+const SUGGEST_MAX = 500;
+const SUGGEST_PER_INSTALL = 3;
+const SUGGEST_PER_DAY = 200;
+
+async function suggest(req, env) {
+  let b;
+  try { b = await req.json(); } catch { return new Response("bad", { status: 400 }); }
+  if (!ID_RE.test(b?.id ?? "") || !VER_RE.test(b?.v ?? "") || typeof b.text !== "string") return new Response("bad", { status: 400 });
+  const text = b.text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim().slice(0, SUGGEST_MAX);
+  if (text.length < 3) return new Response("bad", { status: 400 });
+
+  const now = Date.now();
+  const day = dayKey(dayNum(now)).slice(4);
+  const id = b.id.toLowerCase();
+  const mine = `rl:${id}:${day}`, all = `rlg:${day}`;
+  const nMine = parseInt((await env.STATS.get(mine)) ?? "0", 10) || 0;
+  const nAll = parseInt((await env.STATS.get(all)) ?? "0", 10) || 0;
+  if (nMine >= SUGGEST_PER_INSTALL || nAll >= SUGGEST_PER_DAY) return new Response("slow down", { status: 429 });
+  await env.STATS.put(mine, String(nMine + 1), { expirationTtl: 2 * 86400 });
+  await env.STATS.put(all, String(nAll + 1), { expirationTtl: 2 * 86400 });
+
+  // Newest first when listed: the key counts down from a large number.
+  const rev = String(9999999999999 - now).padStart(13, "0");
+  await env.STATS.put(`sg:${rev}:${crypto.randomUUID().slice(0, 8)}`, text, {
+    metadata: { v: b.v, t: now }, expirationTtl: 180 * 86400,
+  });
+  return new Response("ok");
+}
+
 // ---------------------------------------------------------------- data
 async function listAll(env, prefix) {
   const out = [];
@@ -95,7 +128,7 @@ async function collect(env) {
   const now = Date.now();
   const today = dayNum(now);
 
-  const installs = (await listAll(env)).filter((k) => !k.name.startsWith("day:") && k.metadata).map((k) => k.metadata);
+  const installs = (await listAll(env)).filter((k) => ID_RE.test(k.name) && k.metadata).map((k) => k.metadata);
   const dayMap = {};
   for (const k of await listAll(env, "day:")) if (k.metadata) dayMap[k.name] = k.metadata;
 
@@ -140,7 +173,13 @@ async function collect(env) {
   }
   const sum = (key) => history.reduce((s, d) => s + d[key], 0);
 
+  const sgKeys = (await env.STATS.list({ prefix: "sg:", limit: 50 })).keys;
+  const suggestions = await Promise.all(sgKeys.map(async (k) => ({
+    time: k.metadata?.t ?? 0, version: k.metadata?.v ?? "", text: (await env.STATS.get(k.name)) ?? "",
+  })));
+
   return {
+    suggestions,
     total: installs.length,
     active24h: a24.length, active7d: a7.length, active30d: a30.length,
     stale: installs.length - a7.length,
@@ -198,6 +237,10 @@ function page(d) {
   const ret = d.retention.map((r) =>
     `<div class="c"><b>${r.cohort ? r.percent + "%" : "-"}</b>still using after ${r.days} days<small>${r.kept} of ${r.cohort} installs</small></div>`).join("");
 
+  const sugg = d.suggestions.map((x) =>
+    `<div class=sg><small>${esc(new Date(x.time).toISOString().slice(0, 16).replace("T", " "))} UTC · v${esc(x.version)}</small><div>${esc(x.text)}</div></div>`).join("") ||
+    "<p class=m>No suggestions yet.</p>";
+
   return `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
 <meta http-equiv=refresh content=60>
 <title>Nighty Lite stats</title>
@@ -212,6 +255,7 @@ h1{margin:0 0 4px}h2{font-size:16px;margin:28px 0 8px}.m{color:var(--mut);font-s
 table{width:100%;border-collapse:collapse}td,th{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:500}
 .tag{background:var(--a);color:#000;border-radius:4px;padding:1px 6px;font-size:11px}
 .hb{margin:8px 0}.hl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}.tr{background:var(--line);border-radius:4px;height:8px}.fi{background:var(--a);height:8px;border-radius:4px}
+.sg{padding:10px 0;border-bottom:1px solid var(--line)}.sg:last-child{border:0}.sg small{color:var(--mut)}.sg div{white-space:pre-wrap;word-break:break-word;margin-top:3px}
 .ax{fill:var(--mut);font-size:10px}svg{display:block}
 </style>
 <h1>Nighty Lite users</h1>
@@ -233,6 +277,8 @@ ${card(d.total, "installs seen (60 days)")}${card(d.stale, "inactive 7+ days")}$
 
 <h2>Features used (last 30 days)</h2><div class=p>${featBars}</div>
 <h2>Windows</h2><div class=p>${osBars}</div>
+
+<h2>Suggestions (latest ${d.suggestions.length})</h2><div class=p>${sugg}</div>
 
 <h2>Last 30 days</h2><div class=g>
 ${card(d.last30d.newInstalls, "new installs")}${card(d.last30d.updatesApplied, "updates applied")}

@@ -252,6 +252,14 @@ public partial class MainWindow : Window
     private void CloseSettings_Click(object sender, RoutedEventArgs e) => SettingsTog.IsChecked = false;
     private void Quit_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
 
+    private SuggestionWindow? _suggest;
+    private void Suggest_Click(object sender, RoutedEventArgs e)
+    {
+        if (_suggest is { IsLoaded: true }) { _suggest.Activate(); return; }
+        _suggest = new SuggestionWindow();
+        _suggest.Show();
+    }
+
     // ------------------------------------------------------------------ updates (GitHub releases)
     private readonly UpdateService _updater = new();
     private bool _updating;

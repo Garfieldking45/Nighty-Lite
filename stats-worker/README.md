@@ -22,3 +22,7 @@ Per install (random ID only): app version, Windows 10/11, first and last seen, t
 ## Dashboard
 
 Active users (24h / 7d / 30d), daily active / new / updated charts, 7- and 30-day retention, share on the latest version, versions with error counts, feature usage, Windows split and update failures. It refreshes every minute.
+
+## Suggestions
+
+`POST /suggest` stores a user-typed suggestion (text, app version, time; not the install ID) for 180 days and shows the latest 50 on the dashboard. Limits: 500 characters, 3 per install per day, 200 per day overall. To delete one, run `npx wrangler kv key list --namespace-id <id> --remote --prefix sg:` and then `npx wrangler kv key delete --namespace-id <id> --remote "<key>"`.
