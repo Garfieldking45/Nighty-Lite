@@ -6,10 +6,10 @@
 
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VER_RE = /^\d{1,3}\.\d{1,3}\.\d{1,5}$/;
-const FEATURES = ["clicker", "crossbow", "autotool", "boost", "crosshair", "cps", "sprint", "afk"];
+const FEATURES = ["clicker", "crossbow", "autotool", "boost", "crosshair", "cps", "sprint", "afk", "wins"];
 const FEATURE_LABEL = {
   clicker: "Auto Clicker", crossbow: "Auto Crossbow", autotool: "Auto Tool", boost: "Boost FPS",
-  crosshair: "Crosshair", cps: "CPS counter", sprint: "Auto Sprint", afk: "Anti-AFK",
+  crosshair: "Crosshair", cps: "CPS counter", sprint: "Auto Sprint", afk: "Anti-AFK", wins: "Wins tracker",
 };
 const OS_OK = ["Windows 10", "Windows 11"];
 const DAY = 86400000;

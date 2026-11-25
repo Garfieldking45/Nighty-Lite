@@ -51,7 +51,9 @@ public static class StatsService
         }
     }
 
-    private static readonly string[] FeatureNames = { "clicker", "crossbow", "autotool", "boost", "crosshair", "cps", "sprint", "afk" };
+    // Bits 0-3 and 8 are noticed from the log as they happen; the rest are read from the saved settings at ping time.
+    private static readonly string[] FeatureNames = { "clicker", "crossbow", "autotool", "boost", "crosshair", "cps", "sprint", "afk", "wins" };
+    private static readonly int[] LoggedBits = { 0, 1, 2, 3, 8 };
 
     // Collected this session (thread safe: the clicker, crossbow and logger run off the UI thread).
     private static int _usedMask;
@@ -66,6 +68,7 @@ public static class StatsService
                 : msg.StartsWith("Crossbow started", StringComparison.Ordinal) ? 1
                 : msg.StartsWith("Auto Tool:", StringComparison.Ordinal) ? 2
                 : msg.StartsWith("Boost: high-performance", StringComparison.Ordinal) || msg.StartsWith("Boost: Roblox pid", StringComparison.Ordinal) ? 3
+                : msg.StartsWith("Wins: ", StringComparison.Ordinal) ? 8
                 : -1;
         if (bit >= 0) Interlocked.Or(ref _usedMask, 1 << bit);
     }
@@ -89,7 +92,7 @@ public static class StatsService
 
     private static IEnumerable<string> MaskToNames(int mask)
     {
-        for (int i = 0; i < 4; i++) if ((mask & (1 << i)) != 0) yield return FeatureNames[i];
+        foreach (int i in LoggedBits) if ((mask & (1 << i)) != 0) yield return FeatureNames[i];
     }
 
     private static List<string> Merge(string saved, IEnumerable<string> more) =>

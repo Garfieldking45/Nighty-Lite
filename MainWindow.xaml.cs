@@ -100,6 +100,21 @@ public partial class MainWindow : Window
             StatusLine.Text = "Everything stopped.";
         });
 
+        // ---- Wins tracker (add / undo hotkeys; the counter itself is drawn by HudService)
+        var wins = Svc.S.Wins;
+        // Windows ignores extra modifiers, so Ctrl+F7 also counts as F7: the more specific key wins.
+        static bool Shadowed((int Vk, int Mods) me, (int Vk, int Mods) other) =>
+            other.Vk == me.Vk && other.Mods != me.Mods && (other.Mods & me.Mods) == me.Mods && HotkeyService.IsDown(other);
+        Svc.Hotkeys.Register("winadd", () => (wins.AddVk, wins.AddMods), down =>
+        {
+            if (down && !Shadowed((wins.AddVk, wins.AddMods), (wins.UndoVk, wins.UndoMods))) ChangeWins(+1);
+        });
+        Svc.Hotkeys.Register("winundo", () => (wins.UndoVk, wins.UndoMods), down =>
+        {
+            if (down && !Shadowed((wins.UndoVk, wins.UndoMods), (wins.AddVk, wins.AddMods))) ChangeWins(-1);
+        });
+        wins.PropertyChanged += (_, _) => Refresh();
+
         // ---- Boost FPS wiring
         Svc.Boost.StatusChanged += () => Dispatcher.BeginInvoke(Refresh);
 
@@ -136,6 +151,8 @@ public partial class MainWindow : Window
         ToolLearned.Text = $"Taught: {at.PickSamples.Count} pickaxe, {at.AxeSamples.Count} axe, {at.ShearsSamples.Count} shears blocks. Common blocks are built in.";
         BoostState.Text = Svc.S.Boost.Enabled ? "ON" : "OFF";
         BoostInfo.Text = Svc.Boost.Status;
+        SetKey(WinsAddKey, Hotkeys.Format(Svc.S.Wins.AddVk, Svc.S.Wins.AddMods));
+        SetKey(WinsUndoKey, Hotkeys.Format(Svc.S.Wins.UndoVk, Svc.S.Wins.UndoMods));
         SetKey(StopKey, Hotkeys.Format(Svc.S.StopHotkeyVk, Svc.S.StopHotkeyMods));
         SetKey(GuiKey, Hotkeys.KeyName(Svc.S.OverlayVk));
     }
@@ -450,6 +467,49 @@ public partial class MainWindow : Window
         StatusLine.Text = "Auto Tool forgot every taught block.";
         Refresh();
     }
+
+    // ------------------------------------------------------------------ wins tracker
+    private void ChangeWins(int delta)
+    {
+        var w = Svc.S.Wins;
+        int before = w.Count;
+        w.Count = before + delta;
+        if (w.Count == before) return;
+        Log.Info($"Wins: {w.Count}");
+        StatusLine.Text = $"Wins: {w.Count}";
+    }
+
+    private void WinsAddKey_Click(object sender, RoutedEventArgs e) => Capture(WinsAddKey, (vk, mods) => { Svc.S.Wins.AddVk = vk; Svc.S.Wins.AddMods = mods; });
+    private void WinsUndoKey_Click(object sender, RoutedEventArgs e) => Capture(WinsUndoKey, (vk, mods) => { Svc.S.Wins.UndoVk = vk; Svc.S.Wins.UndoMods = mods; });
+
+    private SetWinsWindow? _setWins;
+    private void WinsSet_Click(object sender, RoutedEventArgs e)
+    {
+        if (_setWins is { IsLoaded: true }) { _setWins.Activate(); return; }
+        _setWins = new SetWinsWindow(Svc.S.Wins);
+        _setWins.Show();
+    }
+
+    private readonly DispatcherTimer _resetTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private bool _resetArmed;
+    private void WinsReset_Click(object sender, RoutedEventArgs e)
+    {
+        void Disarm() { _resetTimer.Stop(); _resetArmed = false; WinsResetBtn.Content = "Reset to 0"; }
+        if (!_resetArmed)
+        {
+            // Two clicks, so a stray click cannot wipe the count.
+            _resetArmed = true;
+            WinsResetBtn.Content = "Click again to reset";
+            _resetTimer.Tick -= ResetTimer_Tick;
+            _resetTimer.Tick += ResetTimer_Tick;
+            _resetTimer.Start();
+            return;
+        }
+        Disarm();
+        Svc.S.Wins.Count = 0;
+        StatusLine.Text = "Wins reset to 0.";
+    }
+    private void ResetTimer_Tick(object? sender, EventArgs e) { _resetTimer.Stop(); _resetArmed = false; WinsResetBtn.Content = "Reset to 0"; }
 
     private void ClickerKey_Click(object sender, RoutedEventArgs e) => Capture(ClickerKey, (vk, mods) => { Svc.S.Clicker.HotkeyVk = vk; Svc.S.Clicker.HotkeyMods = mods; });
     private void BowKey_Click(object sender, RoutedEventArgs e) => Capture(BowKey, (vk, mods) => { Svc.S.Crossbow.HotkeyVk = vk; Svc.S.Crossbow.HotkeyMods = mods; });

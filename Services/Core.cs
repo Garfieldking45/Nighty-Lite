@@ -73,6 +73,7 @@ public sealed class SettingsService
         Current.Hud.PropertyChanged += Dirty;
         Current.Extras.PropertyChanged += Dirty;
         Current.AutoTool.PropertyChanged += Dirty;
+        Current.Wins.PropertyChanged += Dirty;
     }
 
     private void Dirty(object? s, PropertyChangedEventArgs e) { _debounce.Stop(); _debounce.Start(); }

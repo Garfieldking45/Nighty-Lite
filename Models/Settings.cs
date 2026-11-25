@@ -156,6 +156,34 @@ public sealed class HudConfig : ObservableObject
     public double CpsScale { get => _cpsScale; set => Set(ref _cpsScale, Math.Clamp(Math.Round(value, 1), 0.5, 3)); }
 }
 
+/// <summary>
+/// Wins tracker: a counter you add to with a hotkey, drawn over Roblox so you never have to leave the game.
+/// Add win defaults to F7, take one back to Ctrl+F7.
+/// </summary>
+public sealed class WinsConfig : ObservableObject
+{
+    private int _count;
+    private bool _on = true;
+    private double _x = 2, _y = 12, _scale = 1;
+    private int _addVk = 0x76, _addMods, _undoVk = 0x76, _undoMods = Hotkeys.Ctrl;
+
+    public const int MaxWins = 999_999;
+    /// <summary>The number of wins.</summary>
+    public int Count { get => _count; set => Set(ref _count, Math.Clamp(value, 0, MaxWins)); }
+    /// <summary>Show the counter over Roblox.</summary>
+    public bool Enabled { get => _on; set => Set(ref _on, value); }
+    /// <summary>Counter position as a percentage of the Roblox window.</summary>
+    public double X { get => _x; set => Set(ref _x, Math.Clamp(Math.Round(value), 0, 100)); }
+    public double Y { get => _y; set => Set(ref _y, Math.Clamp(Math.Round(value), 0, 100)); }
+    public double Scale { get => _scale; set => Set(ref _scale, Math.Clamp(Math.Round(value, 1), 0.5, 3)); }
+    /// <summary>Key that adds one win.</summary>
+    public int AddVk { get => _addVk; set => Set(ref _addVk, value); }
+    public int AddMods { get => _addMods; set => Set(ref _addMods, value); }
+    /// <summary>Key that takes one win back (for a mis-press).</summary>
+    public int UndoVk { get => _undoVk; set => Set(ref _undoVk, value); }
+    public int UndoMods { get => _undoMods; set => Set(ref _undoMods, value); }
+}
+
 /// <summary>Small input helpers that only press your own keys.</summary>
 public sealed class ExtrasConfig : ObservableObject
 {
@@ -216,6 +244,7 @@ public sealed class AppSettings
     public HudConfig Hud { get; set; } = new();
     public ExtrasConfig Extras { get; set; } = new();
     public AutoToolConfig AutoTool { get; set; } = new();
+    public WinsConfig Wins { get; set; } = new();
     public PrecisionMode Precision { get; set; } = PrecisionMode.Balanced;
     /// <summary>Emergency stop: stops the clicker and the crossbow. Default F9.</summary>
     public int StopHotkeyVk { get; set; } = 0x78;

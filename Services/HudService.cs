@@ -147,8 +147,10 @@ public sealed class HudService
     private Canvas? _canvas;
     private CrosshairVisual? _cross;
     private Border? _cpsBox;
-    private TextBlock? _cpsText, _fpsText, _pingText;
-    private Border? _fpsBox, _pingBox;
+    private TextBlock? _cpsText, _fpsText, _pingText, _winsText;
+    private Border? _fpsBox, _pingBox, _winsBox;
+    private int _winsPrev = int.MinValue;
+    private long _winsFlashUntil;
     private readonly FpsMeter _fps = new();
     private readonly PingMeter _ping = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
@@ -184,10 +186,12 @@ public sealed class HudService
         (_cpsBox, _cpsText) = Box();
         (_fpsBox, _fpsText) = Box();
         (_pingBox, _pingText) = Box();
+        (_winsBox, _winsText) = Box();
         _canvas.Children.Add(_cross);
         _canvas.Children.Add(_cpsBox);
         _canvas.Children.Add(_fpsBox);
         _canvas.Children.Add(_pingBox);
+        _canvas.Children.Add(_winsBox);
         _win = new Window
         {
             WindowStyle = WindowStyle.None, AllowsTransparency = true, Background = Brushes.Transparent, ResizeMode = ResizeMode.NoResize,
@@ -206,7 +210,8 @@ public sealed class HudService
     {
         try
         {
-            bool wanted = _cfg.CrosshairEnabled || _cfg.CpsEnabled || _cfg.FpsEnabled || _cfg.PingEnabled;
+            var wins = Svc.S.Wins;
+            bool wanted = _cfg.CrosshairEnabled || _cfg.CpsEnabled || _cfg.FpsEnabled || _cfg.PingEnabled || wins.Enabled;
             if (_cfg.CpsEnabled) _cps.Start(); else _cps.Stop();
             if (_cfg.FpsEnabled) _fps.Start(); else _fps.Stop();
             if (_cfg.PingEnabled) _ping.Start(() => _cfg.PingHost); else _ping.Stop();
@@ -248,20 +253,29 @@ public sealed class HudService
                 Canvas.SetTop(_cpsBox, Math.Clamp((ch - sz.Height) * _cfg.CpsY / 100, 0, Math.Max(0, ch - sz.Height)));
             }
 
-            void Place(Border box, TextBlock text, bool on, string label, double px, double py)
+            void Place(Border box, TextBlock text, bool on, string label, double px, double py, double scale)
             {
                 box.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
                 if (!on) return;
                 text.Text = label;
-                box.LayoutTransform = new ScaleTransform(_cfg.CpsScale, _cfg.CpsScale);
+                box.LayoutTransform = new ScaleTransform(scale, scale);
                 box.Measure(new Size(cw, ch));
                 var sz = box.DesiredSize;
                 Canvas.SetLeft(box, Math.Clamp((cw - sz.Width) * px / 100, 0, Math.Max(0, cw - sz.Width)));
                 Canvas.SetTop(box, Math.Clamp((ch - sz.Height) * py / 100, 0, Math.Max(0, ch - sz.Height)));
             }
-            Place(_fpsBox!, _fpsText!, _cfg.FpsEnabled, _fps.Fps is double f ? $"{f:0} FPS" : $"FPS: {_fps.Status}", _cfg.FpsX, _cfg.FpsY);
+            Place(_fpsBox!, _fpsText!, _cfg.FpsEnabled, _fps.Fps is double f ? $"{f:0} FPS" : $"FPS: {_fps.Status}", _cfg.FpsX, _cfg.FpsY, _cfg.CpsScale);
             var (ms, jit, loss) = _ping.Read();
-            Place(_pingBox!, _pingText!, _cfg.PingEnabled, ms is int m ? $"{m} ms  \u00B1{jit}{(loss > 0 ? $"  {loss}% loss" : "")}" : "Ping: --", _cfg.PingX, _cfg.PingY);
+            Place(_pingBox!, _pingText!, _cfg.PingEnabled, ms is int m ? $"{m} ms  \u00B1{jit}{(loss > 0 ? $"  {loss}% loss" : "")}" : "Ping: --", _cfg.PingX, _cfg.PingY, _cfg.CpsScale);
+
+            // Wins counter: flashes green for a moment whenever the number changes.
+            if (_winsPrev != wins.Count)
+            {
+                if (_winsPrev != int.MinValue) _winsFlashUntil = Environment.TickCount64 + 800;
+                _winsPrev = wins.Count;
+            }
+            _winsText!.Foreground = Environment.TickCount64 < _winsFlashUntil ? Brushes.LimeGreen : Brushes.White;
+            Place(_winsBox!, _winsText, wins.Enabled, $"Wins: {wins.Count}", wins.X, wins.Y, wins.Scale);
         }
         catch (Exception ex) { Log.Error("HUD update failed", ex); }
     }

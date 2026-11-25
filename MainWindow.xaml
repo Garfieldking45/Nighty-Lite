@@ -603,6 +603,48 @@
                         </Grid>
                     </StackPanel>
                 </Border>
+
+                <Grid Margin="0,1,0,0">
+                    <ToggleButton Style="{StaticResource Mod}" Content="Wins Counter" IsChecked="{Binding Wins.Enabled}"/>
+                    <ToggleButton x:Name="WinsDots" Style="{StaticResource Dots}"/>
+                </Grid>
+                <Border Style="{StaticResource SubPanel}" Visibility="{Binding IsChecked, ElementName=WinsDots, Converter={StaticResource B2V}}">
+                    <StackPanel>
+                        <TextBlock Foreground="#8A8A94" TextWrapping="Wrap" Margin="0,6,0,2" Text="Press the add key after each win; the count shows over Roblox and flashes green. Undo takes one back if you press it by mistake."/>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Wins"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="999999" Step="1" Format="0" Value="{Binding Wins.Count, Mode=TwoWay, Converter={StaticResource Int}}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Add win key"/>
+                            <Button x:Name="WinsAddKey" Grid.Column="1" Padding="8,3" Click="WinsAddKey_Click"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Undo key"/>
+                            <Button x:Name="WinsUndoKey" Grid.Column="1" Padding="8,3" Click="WinsUndoKey_Click"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Across %"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="100" Step="5" Format="0" Value="{Binding Wins.X, Mode=TwoWay}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Down %"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0" Max="100" Step="5" Format="0" Value="{Binding Wins.Y, Mode=TwoWay}"/>
+                        </Grid>
+                        <Grid Style="{StaticResource Row}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Opt}" Text="Scale"/>
+                            <local:Stepper Grid.Column="1" HorizontalAlignment="Left" Min="0.5" Max="3" Step="0.1" Format="0.#" Value="{Binding Wins.Scale, Mode=TwoWay}"/>
+                        </Grid>
+                        <Button Content="Type in a number..." Click="WinsSet_Click" Padding="8,4" Margin="0,8,0,0"/>
+                        <Button x:Name="WinsResetBtn" Content="Reset to 0" Click="WinsReset_Click" Padding="8,4" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Border>
 
