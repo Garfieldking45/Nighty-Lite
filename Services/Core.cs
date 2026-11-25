@@ -26,6 +26,7 @@ public static class Log
     public static void Error(string msg, Exception? ex = null) => Write("ERROR", msg, ex);
     private static void Write(string level, string msg, Exception? ex)
     {
+        StatsService.NoteLog(level, msg);
         try
         {
             lock (Gate)

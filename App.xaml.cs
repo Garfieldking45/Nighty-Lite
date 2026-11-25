@@ -51,6 +51,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_ownsMutex) { try { StatsService.Persist(Svc.S.Extras); } catch { } }
         if (_ownsMutex) _single?.ReleaseMutex();
         base.OnExit(e);
     }

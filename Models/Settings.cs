@@ -170,6 +170,10 @@ public sealed class ExtrasConfig : ObservableObject
     public bool ShareUsageStats { get => _stats; set => Set(ref _stats, value); }
     /// <summary>Random ID created on first run. Not linked to your name, PC, IP or Roblox account.</summary>
     public string InstallId { get; set; } = "";
+    // Counters waiting to be reported with the next ping (see StatsService).
+    public string PendingFeatures { get; set; } = "";
+    public int PendingErrors { get; set; }
+    public int PendingUpdateFails { get; set; }
 }
 
 /// <summary>

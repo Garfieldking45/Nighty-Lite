@@ -655,7 +655,7 @@
                         <TextBlock Style="{StaticResource Opt}" Text="Emergency stop"/>
                         <Button x:Name="StopKey" Grid.Column="1" Padding="10,3" MinWidth="70" Click="StopKey_Click"/>
                     </Grid>
-                    <Grid Style="{StaticResource Row}" ToolTip="Sends only a random install ID and the app version, once per start. No name, IP, PC info or Roblox account.">
+                    <Grid Style="{StaticResource Row}" ToolTip="Once per start, sends: a random install ID, the app version, Windows 10/11, which features you used (names only), and error / failed-update counts. No name, IP, settings, hotkeys, games or Roblox account.">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource Opt}" Text="Share anonymous usage stats"/>
                         <ToggleButton Grid.Column="1" Style="{StaticResource Pill}" HorizontalAlignment="Right" IsChecked="{Binding Extras.ShareUsageStats}"/>

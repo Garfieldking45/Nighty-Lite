@@ -17,4 +17,8 @@ npx wrangler deploy                        # prints https://nighty-stats.<you>.w
 
 ## What is stored
 
-Random install ID, app version, first/last seen time. No IP address, name, PC info or Roblox account. Entries expire after 60 days without a ping.
+Per install (random ID only): app version, Windows 10/11, first and last seen, the day each feature was last used, and error counts for its last few versions. Per day: active, new and updated installs, errors and failed updates. No IP address, name, settings, hotkeys, games or Roblox account. Installs expire after 60 days without a ping; daily totals after 400 days.
+
+## Dashboard
+
+Active users (24h / 7d / 30d), daily active / new / updated charts, 7- and 30-day retention, share on the latest version, versions with error counts, feature usage, Windows split and update failures. It refreshes every minute.

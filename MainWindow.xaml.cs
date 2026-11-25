@@ -40,7 +40,7 @@ public partial class MainWindow : Window
         _overlayTimer.Tick += (_, _) => UpdateOverlay();
         _overlayTimer.Start();
         CheckForUpdate();
-        _ = StatsService.PingAsync(Svc.S.Extras);
+        _ = StatsService.PingAsync(Svc.S);
         DataContext = Svc.S;
         var cl = Svc.S.Clicker;
         var bow = Svc.S.Crossbow;
@@ -275,6 +275,7 @@ public partial class MainWindow : Window
         string? error = await _updater.InstallAsync(rel, progress);
         if (error is null) { Application.Current.Shutdown(); return; }
         StatusLine.Text = error;
+        StatsService.NoteUpdateFailed(Svc.S.Extras);
         UpdateBtn.Content = $"Update to {rel.Tag}";
         UpdateBtn.IsEnabled = true;
         _updating = false;
