@@ -164,6 +164,12 @@ public sealed class ExtrasConfig : ObservableObject
     public bool AutoSprint { get => _sprint; set => Set(ref _sprint, value); }
     /// <summary>Taps a harmless key every few minutes while Roblox is in front, so the 20-minute idle kick never fires.</summary>
     public bool AntiAfk { get => _afk; set => Set(ref _afk, value); }
+
+    private bool _stats = true;
+    /// <summary>Sends an anonymous ping (random install ID + app version) at start-up so the author can count users per version. Nothing else.</summary>
+    public bool ShareUsageStats { get => _stats; set => Set(ref _stats, value); }
+    /// <summary>Random ID created on first run. Not linked to your name, PC, IP or Roblox account.</summary>
+    public string InstallId { get; set; } = "";
 }
 
 /// <summary>

@@ -40,6 +40,7 @@ public partial class MainWindow : Window
         _overlayTimer.Tick += (_, _) => UpdateOverlay();
         _overlayTimer.Start();
         CheckForUpdate();
+        _ = StatsService.PingAsync(Svc.S.Extras);
         DataContext = Svc.S;
         var cl = Svc.S.Clicker;
         var bow = Svc.S.Crossbow;
