@@ -5,3 +5,5 @@ publish-new/
 .claude/
 .vs/
 *.user
+stats-worker/.wrangler/
+stats-worker/node_modules/
