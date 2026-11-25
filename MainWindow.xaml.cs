@@ -102,6 +102,10 @@ public partial class MainWindow : Window
 
         // ---- Wins tracker (add / undo hotkeys; the counter itself is drawn by HudService)
         var wins = Svc.S.Wins;
+        // A win key that is the same as the overlay key (easy to end up with, since that key is held to rebind) would add a win
+        // every time the overlay opens. Put such a key back to the default.
+        if (wins.AddVk <= 0 || wins.AddVk == Svc.S.OverlayVk) { wins.AddVk = 0x2D; wins.AddMods = 0; }
+        if (wins.UndoVk <= 0 || wins.UndoVk == Svc.S.OverlayVk) { wins.UndoVk = 0x76; wins.UndoMods = Hotkeys.Ctrl; }
         // Windows ignores extra modifiers, so Ctrl+F7 also counts as F7: the more specific key wins.
         static bool Shadowed((int Vk, int Mods) me, (int Vk, int Mods) other) =>
             other.Vk == me.Vk && other.Mods != me.Mods && (other.Mods & me.Mods) == me.Mods && HotkeyService.IsDown(other);
@@ -526,6 +530,8 @@ public partial class MainWindow : Window
     private void Capture(Button target, Action<int, int> apply, int ignoreVk = 0)
     {
         if (_capturing) return;
+        // The overlay key is held to reach these buttons, so it must never be captured by accident: skip it until it is let go.
+        if (ignoreVk <= 0) ignoreVk = Svc.S.OverlayVk;
         _capturing = true;
         _capTarget = target;
         Svc.Hotkeys.Suspended = true;

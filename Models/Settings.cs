@@ -158,14 +158,14 @@ public sealed class HudConfig : ObservableObject
 
 /// <summary>
 /// Wins tracker: a counter you add to with a hotkey, drawn over Roblox so you never have to leave the game.
-/// Add win defaults to F7, take one back to Ctrl+F7.
+/// Add win defaults to Insert, take one back to Ctrl+F7.
 /// </summary>
 public sealed class WinsConfig : ObservableObject
 {
     private int _count;
     private bool _on = true;
     private double _x = 2, _y = 12, _scale = 1;
-    private int _addVk = 0x76, _addMods, _undoVk = 0x76, _undoMods = Hotkeys.Ctrl;
+    private int _addVk = 0x2D, _addMods, _undoVk = 0x76, _undoMods = Hotkeys.Ctrl;
 
     public const int MaxWins = 999_999;
     /// <summary>The number of wins.</summary>
