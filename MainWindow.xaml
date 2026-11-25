@@ -656,6 +656,7 @@
                         <Button x:Name="StopKey" Grid.Column="1" Padding="10,3" MinWidth="70" Click="StopKey_Click"/>
                     </Grid>
                     <Button Content="Reset GUI positions" Click="ResetPos_Click" Padding="8,5" Margin="0,14,0,0"/>
+                    <Button x:Name="UpdateBtn" Visibility="Collapsed" Click="Update_Click" Padding="8,5" Margin="0,6,0,0"/>
                     <Button Content="Quit Nighty" Click="Quit_Click" Padding="8,5" Margin="0,6,0,0"/>
                 </StackPanel>
             </StackPanel>

@@ -39,6 +39,7 @@ public partial class MainWindow : Window
         LoadPositions();
         _overlayTimer.Tick += (_, _) => UpdateOverlay();
         _overlayTimer.Start();
+        CheckForUpdate();
         DataContext = Svc.S;
         var cl = Svc.S.Clicker;
         var bow = Svc.S.Crossbow;
@@ -249,6 +250,34 @@ public partial class MainWindow : Window
 
     private void CloseSettings_Click(object sender, RoutedEventArgs e) => SettingsTog.IsChecked = false;
     private void Quit_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
+
+    // ------------------------------------------------------------------ updates (GitHub releases)
+    private readonly UpdateService _updater = new();
+    private bool _updating;
+
+    private async void CheckForUpdate()
+    {
+        var rel = await _updater.CheckAsync();
+        if (rel is null) return;
+        UpdateBtn.Content = $"Update to {rel.Tag}";
+        UpdateBtn.Visibility = Visibility.Visible;
+        StatusLine.Text = $"Update {rel.Tag} is available. Open Settings and press the update button.";
+        _hintUntil = Math.Max(_hintUntil, Environment.TickCount64 + 6000);
+    }
+
+    private async void Update_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updating || _updater.Available is not { } rel) return;
+        _updating = true;
+        UpdateBtn.IsEnabled = false;
+        var progress = new Progress<double>(p => UpdateBtn.Content = $"Downloading... {p:P0}");
+        string? error = await _updater.InstallAsync(rel, progress);
+        if (error is null) { Application.Current.Shutdown(); return; }
+        StatusLine.Text = error;
+        UpdateBtn.Content = $"Update to {rel.Tag}";
+        UpdateBtn.IsEnabled = true;
+        _updating = false;
+    }
 
     // ------------------------------------------------------------------ theme: hue slider + panel colour
     private bool _hueDrag;
